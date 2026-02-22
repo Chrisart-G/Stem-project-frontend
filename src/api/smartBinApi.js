@@ -41,7 +41,8 @@ export async function signupStudent(payload) {
 }
 
 /**
- * Record bottles from ESP32 / quick action
+ * Record bottles (used by ESP32 / tools)
+ * Frontend no longer calls this directly for the smart bin button.
  */
 export async function recordBottleEvent(studentId, bottles = 1) {
   const res = await fetch(`${API_BASE_URL}/api/iot/bottle-event`, {
@@ -81,7 +82,9 @@ export async function redeemReward(studentId, rewardKey) {
   return data;
 }
 
-// Get last N recent activity entries for a student
+/**
+ * Get last N recent activity entries for a student
+ */
 export async function getRecentActivity(studentId, limit = 5) {
   const res = await fetch(
     `${API_BASE_URL}/api/iot/activity/${encodeURIComponent(
@@ -93,7 +96,9 @@ export async function getRecentActivity(studentId, limit = 5) {
   return data.activities || [];
 }
 
-// Admin login
+/**
+ * Admin login
+ */
 export async function loginAdmin({ username, password }) {
   const res = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
     method: "POST",
@@ -105,14 +110,18 @@ export async function loginAdmin({ username, password }) {
   return data.admin; // { id, username, fullName }
 }
 
-// Fetch pending redemptions for admin dashboard
+/**
+ * Fetch pending redemptions for admin dashboard
+ */
 export async function fetchPendingRedemptions() {
   const res = await fetch(`${API_BASE_URL}/api/admin/pending-redemptions`);
   const data = await handleJsonResponse(res);
   return data.items || [];
 }
 
-// Mark a redemption as claimed
+/**
+ * Mark a redemption as claimed
+ */
 export async function markRedemptionClaimed(redemptionId) {
   const res = await fetch(`${API_BASE_URL}/api/admin/claim`, {
     method: "POST",
@@ -122,4 +131,18 @@ export async function markRedemptionClaimed(redemptionId) {
 
   const data = await handleJsonResponse(res);
   return data.redemption;
+}
+
+/**
+ * Ask backend to queue an "open bin" request for this student.
+ * ESP32 will later poll /api/iot/next-open-request to execute it.
+ */
+export async function requestOpenBin(studentId) {
+  const res = await fetch(`${API_BASE_URL}/api/iot/open-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ studentId }),
+  });
+
+  return handleJsonResponse(res);
 }

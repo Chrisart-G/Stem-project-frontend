@@ -1,10 +1,10 @@
 // src/Component/StudentDashboard.jsx
 import { useEffect, useState } from "react";
 import {
-  recordBottleEvent,
   getRedeemStatus,
   redeemReward,
   getRecentActivity,
+  requestOpenBin,
 } from "../api/smartBinApi";
 
 const maroon = "#7b1113";
@@ -64,21 +64,29 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
     }
   };
 
-  const handleAddBottle = async () => {
+  // NEW: ask backend to queue an "open bin" command for this student.
+  // ESP32 will pick this up and actually move the servos + add points.
+  const handleInsertBottle = async () => {
     setStatusMessage("");
-    setLoadingBottle(true);
+    if (!student?.studentId) return;
+
     try {
-      const res = await recordBottleEvent(student.studentId, 1);
-      setStudent((prev) => ({
-        ...prev,
-        points: res.points,
-        totalBottles: res.totalBottles,
-      }));
-      setStatusMessage(`+${res.addedPoints} pts added from 1 bottle.`);
-      await refreshActivity();
+      setLoadingBottle(true);
+
+      const res = await requestOpenBin(student.studentId);
+
+      setStatusMessage(
+        res.message ||
+          "Insert request sent. Please go to the Smart Bin and insert your bottle."
+      );
+
+      // We DO NOT update points here directly, because the ESP32
+      // will only add points after the bottle is detected.
+      // Student can refresh, or you could call refreshActivity after a delay.
+      // await refreshActivity();
     } catch (err) {
       console.error(err);
-      setStatusMessage(err.message || "Failed to record bottle.");
+      setStatusMessage(err.message || "Failed to contact Smart Bin.");
     } finally {
       setLoadingBottle(false);
     }
@@ -193,7 +201,7 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
               </p>
               <button
                 type="button"
-                onClick={handleAddBottle}
+                onClick={handleInsertBottle}
                 disabled={loadingBottle}
                 className="w-full bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 active:scale-[0.99] transition transform disabled:opacity-70"
               >
@@ -207,12 +215,14 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-sm font-semibold text-gray-900">
-                    Plastic Bottle
+                    Insert Bottle (Smart Bin)
                   </p>
-                  <p className="text-xs text-gray-600">+1 pts per bottle</p>
+                  <p className="text-xs text-gray-600">
+                    Queue a bottle for the Smart Bin
+                  </p>
                 </div>
                 <div className="text-xs text-gray-500 whitespace-nowrap">
-                  {loadingBottle ? "Saving..." : "Tap"}
+                  {loadingBottle ? "Sending..." : "Tap"}
                 </div>
               </button>
             </section>
