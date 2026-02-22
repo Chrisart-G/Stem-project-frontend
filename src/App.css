@@ -1,0 +1,25 @@
+/* src/App.css */
+
+/* Root must fill the screen and NOT be centered with max-width */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+/* you can keep logo / card styles if you still use them elsewhere,
+   but they don't affect the layout of your dashboard */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
