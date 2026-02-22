@@ -5,6 +5,7 @@ import {
   redeemReward,
   getRecentActivity,
   requestOpenBin,
+  getStudentById,
 } from "../api/smartBinApi";
 
 const maroon = "#7b1113";
@@ -64,8 +65,34 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
     }
   };
 
-  // NEW: ask backend to queue an "open bin" command for this student.
-  // ESP32 will pick this up and actually move the servos + add points.
+  // NEW: refresh everything (student stats + locked rewards + activity)
+  const handleRefresh = async () => {
+    if (!student?.studentId) return;
+
+    setStatusMessage("");
+    try {
+      setActivityLoading(true);
+
+      const [freshStudent, locked, recent] = await Promise.all([
+        getStudentById(student.studentId),
+        getRedeemStatus(student.studentId),
+        getRecentActivity(student.studentId, 5),
+      ]);
+
+      setStudent(freshStudent);
+      setLockedRewards(locked);
+      setActivities(recent);
+
+      setStatusMessage("Dashboard refreshed.");
+    } catch (err) {
+      console.error("Failed to refresh dashboard:", err);
+      setStatusMessage(err.message || "Failed to refresh dashboard.");
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  // ask backend to queue an "open bin" command for this student.
   const handleInsertBottle = async () => {
     setStatusMessage("");
     if (!student?.studentId) return;
@@ -77,13 +104,8 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
 
       setStatusMessage(
         res.message ||
-          "Insert request sent. Please go to the Smart Bin and insert your bottle."
+          "Insert request queued. Waiting for Smart Bin..."
       );
-
-      // We DO NOT update points here directly, because the ESP32
-      // will only add points after the bottle is detected.
-      // Student can refresh, or you could call refreshActivity after a delay.
-      // await refreshActivity();
     } catch (err) {
       console.error(err);
       setStatusMessage(err.message || "Failed to contact Smart Bin.");
@@ -163,6 +185,21 @@ export default function StudentDashboard({ student: initialStudent, onLogout }) 
                   {student.gradeLevel || "Student"}
                 </p>
               </div>
+            </div>
+
+            {/* Small row with Refresh button above summary cards */}
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-[11px] sm:text-xs text-gray-500">
+                Overview
+              </span>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="text-[11px] sm:text-xs px-2 py-1 rounded-full border border-gray-300 bg-white hover:bg-gray-50 flex items-center gap-1"
+              >
+                <span className="inline-block">⟳</span>
+                <span>Refresh</span>
+              </button>
             </div>
 
             {/* Summary cards */}

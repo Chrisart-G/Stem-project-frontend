@@ -41,8 +41,21 @@ export async function signupStudent(payload) {
 }
 
 /**
+ * Fetch latest student info by ID
+ * (used by the Refresh button)
+ */
+export async function getStudentById(studentId) {
+  const res = await fetch(
+    `${API_BASE_URL}/api/student/${encodeURIComponent(studentId)}`
+  );
+
+  const data = await handleJsonResponse(res);
+  // backend returns: { id, studentId, name, gradeLevel, points, totalBottles }
+  return data;
+}
+
+/**
  * Record bottles (used by ESP32 / tools)
- * Frontend no longer calls this directly for the smart bin button.
  */
 export async function recordBottleEvent(studentId, bottles = 1) {
   const res = await fetch(`${API_BASE_URL}/api/iot/bottle-event`, {
