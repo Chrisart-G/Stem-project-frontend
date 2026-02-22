@@ -12,9 +12,8 @@ async function handleJsonResponse(res) {
   return data;
 }
 
-/**
- * Student login
- */
+/* ---------- STUDENT AUTH / PROFILE ---------- */
+
 export async function loginStudent({ studentId, password }) {
   const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: "POST",
@@ -26,9 +25,6 @@ export async function loginStudent({ studentId, password }) {
   return data.student;
 }
 
-/**
- * Student signup
- */
 export async function signupStudent(payload) {
   const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
     method: "POST",
@@ -40,23 +36,16 @@ export async function signupStudent(payload) {
   return data.student;
 }
 
-/**
- * Fetch latest student info by ID
- * (used by the Refresh button)
- */
+/** Get latest student info (for dashboard refresh) */
 export async function getStudentById(studentId) {
   const res = await fetch(
     `${API_BASE_URL}/api/student/${encodeURIComponent(studentId)}`
   );
-
-  const data = await handleJsonResponse(res);
-  // backend returns: { id, studentId, name, gradeLevel, points, totalBottles }
-  return data;
+  return handleJsonResponse(res);
 }
 
-/**
- * Record bottles (used by ESP32 / tools)
- */
+/* ---------- IOT / STUDENT POINTS ---------- */
+
 export async function recordBottleEvent(studentId, bottles = 1) {
   const res = await fetch(`${API_BASE_URL}/api/iot/bottle-event`, {
     method: "POST",
@@ -65,12 +54,9 @@ export async function recordBottleEvent(studentId, bottles = 1) {
   });
 
   const data = await handleJsonResponse(res);
-  return data; // { message, points, totalBottles, addedPoints }
+  return data;
 }
 
-/**
- * Get which rewards are currently pending (locked) for this student
- */
 export async function getRedeemStatus(studentId) {
   const res = await fetch(
     `${API_BASE_URL}/api/iot/redeem-status/${encodeURIComponent(studentId)}`
@@ -80,9 +66,6 @@ export async function getRedeemStatus(studentId) {
   return data.lockedRewardKeys || [];
 }
 
-/**
- * Redeem a reward
- */
 export async function redeemReward(studentId, rewardKey) {
   const res = await fetch(`${API_BASE_URL}/api/iot/redeem`, {
     method: "POST",
@@ -91,13 +74,9 @@ export async function redeemReward(studentId, rewardKey) {
   });
 
   const data = await handleJsonResponse(res);
-  // { message, points, lockedRewardKey }
   return data;
 }
 
-/**
- * Get last N recent activity entries for a student
- */
 export async function getRecentActivity(studentId, limit = 5) {
   const res = await fetch(
     `${API_BASE_URL}/api/iot/activity/${encodeURIComponent(
@@ -109,9 +88,19 @@ export async function getRecentActivity(studentId, limit = 5) {
   return data.activities || [];
 }
 
-/**
- * Admin login
- */
+/** Ask backend to queue an "open bin" request for this student */
+export async function requestOpenBin(studentId) {
+  const res = await fetch(`${API_BASE_URL}/api/iot/open-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ studentId }),
+  });
+
+  return handleJsonResponse(res);
+}
+
+/* ---------- ADMIN AUTH ---------- */
+
 export async function loginAdmin({ username, password }) {
   const res = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
     method: "POST",
@@ -120,21 +109,17 @@ export async function loginAdmin({ username, password }) {
   });
 
   const data = await handleJsonResponse(res);
-  return data.admin; // { id, username, fullName }
+  return data.admin;
 }
 
-/**
- * Fetch pending redemptions for admin dashboard
- */
+/* ---------- ADMIN DASHBOARD: PENDING REDEMPTIONS ---------- */
+
 export async function fetchPendingRedemptions() {
   const res = await fetch(`${API_BASE_URL}/api/admin/pending-redemptions`);
   const data = await handleJsonResponse(res);
   return data.items || [];
 }
 
-/**
- * Mark a redemption as claimed
- */
 export async function markRedemptionClaimed(redemptionId) {
   const res = await fetch(`${API_BASE_URL}/api/admin/claim`, {
     method: "POST",
@@ -146,16 +131,38 @@ export async function markRedemptionClaimed(redemptionId) {
   return data.redemption;
 }
 
+/* ---------- ADMIN DASHBOARD: NEW HISTORY & STATS ---------- */
+
 /**
- * Ask backend to queue an "open bin" request for this student.
- * ESP32 will later poll /api/iot/next-open-request to execute it.
+ * Get redemption history (pending + claimed)
+ * options = { status: 'all'|'pending'|'claimed', limit }
  */
-export async function requestOpenBin(studentId) {
-  const res = await fetch(`${API_BASE_URL}/api/iot/open-request`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ studentId }),
-  });
+export async function fetchRedemptionHistory(options = {}) {
+  const { status = "all", limit = 50 } = options;
+  const params = new URLSearchParams();
+  params.set("status", status);
+  params.set("limit", String(limit));
+
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/redemption-history?${params.toString()}`
+  );
+
+  const data = await handleJsonResponse(res);
+  return data.items || [];
+}
+
+/**
+ * Get admin stats for given date range
+ * start / end should be ISO strings
+ */
+export async function fetchAdminStats(startISO, endISO) {
+  const params = new URLSearchParams();
+  if (startISO) params.set("start", startISO);
+  if (endISO) params.set("end", endISO);
+
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/stats?${params.toString()}`
+  );
 
   return handleJsonResponse(res);
 }
